@@ -1,0 +1,283 @@
+respondent_id,submitted_at,age_group,gender,satisfaction,recommend_0_10,channels_used,comment
+R0001,03/14/2024 15:40,18-24,2,5,1,Email;Store,
+R0002,03/01/2024 15:04,25-34,1,3,0,Email;Phone;Store,
+R0003,03/30/2024 21:38,55+,2,4,10,Email,App crashes on login; please fix
+R0004,03/08/2024 06:42,35-44,1,4,3,Chat;Email;Store,Okay overall
+R0005,03/19/2024 18:23,35-44,1,4,6,Store,App crashes on login; please fix
+R0006,03/06/2024 07:40,18-24,2,4,5,Phone;Store,
+R0007,03/02/2024 08:41,18-24,1,5,6,Email,
+R0008,03/23/2024 17:58,55+,2,4,5,Phone,"Staff said ""please wait"", took 20 mins"
+R0009,03/17/2024 15:35,55+,2,4,,Email,"Great service, will come back!"
+R0010,03/01/2024 09:27,55+,2,1,,Email;Phone;Store,App crashes on login; please fix
+R0011,03/11/2024 06:28,45-54,3,4,9,Store,App crashes on login; please fix
+R0012,03/22/2024 15:21,25-34,1,5,2,Email;Store,"Staff said ""please wait"", took 20 mins"
+R0013,03/12/2024 17:04,18-24,1,2,,Phone,"Staff said ""please wait"", took 20 mins"
+R0014,03/20/2024 03:33,25-34,1,3,8,Chat,App crashes on login; please fix
+R0015,03/21/2024 20:38,25-34,1,4,6,Email;Phone;Store,
+R0016,03/05/2024 06:18,25-34,1,4,5,Email;Phone;Store,App crashes on login; please fix
+R0017,03/07/2024 12:04,35-44,1,4,1,Email;Phone;Store,
+R0018,03/23/2024 02:17,45-54,1,4,0,Chat;Email;Store,App crashes on login; please fix
+R0019,03/07/2024 15:31,25-34,2,4,6,Phone,
+R0020,03/02/2024 05:57,25-34,2,2,10,Phone,
+R0021,03/25/2024 13:29,25-34,1,5,8,Chat;Store,
+R0022,03/28/2024 19:45,45-54,2,4,,Email;Phone,Okay overall
+R0023,03/10/2024 16:02,45-54,1,4,5,Chat;Phone;Store,"Great service, will come back!"
+R0024,03/31/2024 07:29,25-34,1,4,7,Chat;Phone,
+R0025,03/29/2024 06:07,35-44,1,4,4,Chat,"Staff said ""please wait"", took 20 mins"
+R0026,03/23/2024 23:50,25-34,1,4,6,Chat;Phone;Store,"Delivery was late
+but support helped"
+R0027,03/23/2024 14:27,45-54,2,1,0,Store,"Great service, will come back!"
+R0028,03/12/2024 03:55,18-24,1,4,5,Chat,"Great service, will come back!"
+R0029,03/10/2024 02:20,18-24,3,4,1,Chat;Email;Phone,App crashes on login; please fix
+R0030,03/20/2024 17:16,35-44,2,4,1,Chat;Email;Store,
+R0031,03/15/2024 22:52,35-44,1,3,,Email,"Delivery was late
+but support helped"
+R0032,03/10/2024 05:14,45-54,1,4,10,Chat,"Great service, will come back!"
+R0033,03/09/2024 22:52,25-34,2,4,7,Phone,"Too expensive, but good quality"
+R0034,03/28/2024 13:01,35-44,1,4,8,Email;Phone,
+R0035,03/09/2024 22:15,35-44,2,4,0,Chat;Phone,Okay overall
+R0036,03/15/2024 21:02,18-24,3,4,2,Store,Okay overall
+R0037,03/08/2024 07:45,18-24,1,5,3,Chat;Email;Store,"Staff said ""please wait"", took 20 mins"
+R0038,03/05/2024 06:22,45-54,2,4,9,Chat;Email,"Great service, will come back!"
+R0039,03/11/2024 20:06,35-44,2,5,5,Email;Phone;Store,"Delivery was late
+but support helped"
+R0040,03/02/2024 03:43,25-34,2,3,,Chat;Phone;Store,"Staff said ""please wait"", took 20 mins"
+R0041,03/14/2024 21:32,25-34,2,4,,Chat;Email;Phone,
+R0042,03/03/2024 06:22,25-34,1,2,,Store,
+R0043,03/10/2024 00:18,45-54,1,2,8,Chat;Phone;Store,"Staff said ""please wait"", took 20 mins"
+R0044,03/03/2024 17:42,45-54,1,4,8,Phone;Store,
+R0045,03/14/2024 03:21,55+,3,4,8,Chat,
+R0046,03/12/2024 19:27,45-54,1,4,6,Email;Store,App crashes on login; please fix
+R0047,03/09/2024 15:21,18-24,1,4,1,Chat;Email;Store,
+R0048,03/11/2024 10:54,45-54,2,5,5,Email;Phone,
+R0049,03/21/2024 21:47,18-24,2,4,1,Phone,
+R0050,03/03/2024 14:43,25-34,2,3,6,Email,"Staff said ""please wait"", took 20 mins"
+R0051,03/23/2024 14:36,25-34,2,2,8,Email;Phone;Store,"Too expensive, but good quality"
+R0052,03/22/2024 08:32,25-34,2,3,,Email;Phone,"Great service, will come back!"
+R0053,03/01/2024 11:17,55+,1,4,2,Chat;Email;Phone,
+R0054,03/23/2024 10:22,18-24,2,3,2,Chat;Phone,"Staff said ""please wait"", took 20 mins"
+R0055,03/06/2024 10:42,25-34,1,2,5,Email;Store,"Too expensive, but good quality"
+R0056,03/19/2024 21:27,35-44,1,4,2,Chat;Phone,"Staff said ""please wait"", took 20 mins"
+R0057,03/05/2024 04:04,18-24,2,3,10,Chat;Phone;Store,
+R0058,03/27/2024 00:43,35-44,2,3,7,Chat;Phone;Store,"Delivery was late
+but support helped"
+R0059,03/05/2024 20:27,55+,1,3,7,Email;Store,Okay overall
+R0060,03/23/2024 15:54,18-24,1,4,4,Chat;Phone;Store,
+R0061,03/14/2024 15:45,55+,2,4,5,Chat;Email;Store,
+R0062,03/19/2024 14:37,18-24,1,1,1,Chat;Email;Store,App crashes on login; please fix
+R0063,03/21/2024 09:01,25-34,1,4,10,Email,"Delivery was late
+but support helped"
+R0064,03/29/2024 06:59,35-44,2,3,9,Chat;Store,"Delivery was late
+but support helped"
+R0065,03/17/2024 01:32,35-44,3,4,5,Chat;Email,
+R0066,03/23/2024 00:23,25-34,2,4,8,Email;Phone,
+R0067,03/22/2024 06:12,35-44,2,4,10,Chat;Phone;Store,"Too expensive, but good quality"
+R0068,03/15/2024 15:49,55+,2,3,1,Phone,Okay overall
+R0069,03/27/2024 18:33,45-54,2,2,3,Chat;Email,
+R0070,03/02/2024 17:16,45-54,2,4,5,Email;Store,"Staff said ""please wait"", took 20 mins"
+R0071,03/12/2024 10:45,18-24,2,4,6,Email;Phone,
+R0072,03/16/2024 08:45,18-24,2,5,9,Email;Store,"Too expensive, but good quality"
+R0073,03/18/2024 10:53,45-54,2,4,9,Store,App crashes on login; please fix
+R0074,03/10/2024 06:12,25-34,2,5,6,Phone,"Too expensive, but good quality"
+R0075,03/21/2024 11:29,45-54,1,4,0,Chat;Email;Store,"Too expensive, but good quality"
+R0076,03/11/2024 14:09,25-34,1,3,8,Chat,
+R0077,03/29/2024 15:47,25-34,2,5,,Chat;Phone,"Great service, will come back!"
+R0078,03/23/2024 12:24,45-54,1,4,4,Email;Phone;Store,App crashes on login; please fix
+R0079,03/27/2024 23:06,45-54,1,2,5,Chat;Phone;Store,
+R0080,03/20/2024 21:26,25-34,3,4,0,Chat;Email;Store,
+R0081,03/22/2024 00:10,25-34,2,5,4,Chat,"Staff said ""please wait"", took 20 mins"
+R0082,03/11/2024 06:42,18-24,1,4,8,Chat,
+R0083,03/11/2024 08:35,35-44,1,5,5,Email;Phone;Store,App crashes on login; please fix
+R0084,03/21/2024 09:27,45-54,1,4,7,Chat;Email;Store,"Delivery was late
+but support helped"
+R0085,03/08/2024 02:35,25-34,1,4,6,Chat,
+R0086,03/07/2024 19:29,18-24,2,3,0,Chat;Phone,Okay overall
+R0087,03/18/2024 06:54,35-44,2,4,4,Email;Phone,
+R0088,03/04/2024 04:03,18-24,1,3,6,Chat;Email;Store,
+R0089,03/11/2024 22:22,25-34,1,3,4,Store,"Delivery was late
+but support helped"
+R0090,03/12/2024 11:21,45-54,2,5,10,Chat,
+R0091,03/26/2024 15:57,55+,2,2,1,Chat,
+R0092,03/30/2024 15:06,18-24,1,4,0,Chat;Email,
+R0093,03/01/2024 18:25,35-44,2,5,8,Email;Store,
+R0094,03/07/2024 05:26,25-34,2,4,0,Chat;Email,"Delivery was late
+but support helped"
+R0095,03/15/2024 03:41,35-44,2,4,7,Chat;Email;Store,
+R0096,03/28/2024 07:17,55+,1,5,,Chat;Phone;Store,
+R0097,03/20/2024 14:52,35-44,1,5,0,Email;Phone;Store,"Staff said ""please wait"", took 20 mins"
+R0098,03/20/2024 07:04,25-34,1,3,10,Email;Phone,
+R0099,03/15/2024 02:26,55+,2,5,4,Chat,Okay overall
+R0100,03/06/2024 00:57,35-44,1,5,4,Phone,Okay overall
+R0101,03/28/2024 01:24,55+,1,4,3,Chat;Store,Okay overall
+R0102,03/28/2024 17:48,18-24,2,4,5,Chat;Store,"Great service, will come back!"
+R0103,03/06/2024 06:08,45-54,1,3,1,Chat;Email;Phone,"Great service, will come back!"
+R0104,03/11/2024 05:40,55+,1,4,3,Phone;Store,
+R0105,03/22/2024 15:08,45-54,1,5,9,Chat;Email;Store,
+R0106,03/22/2024 23:31,18-24,1,5,0,Chat;Email;Store,"Great service, will come back!"
+R0107,03/12/2024 16:25,35-44,2,3,0,Email,App crashes on login; please fix
+R0108,03/07/2024 06:45,55+,2,4,6,Phone,"Delivery was late
+but support helped"
+R0109,03/18/2024 21:23,55+,1,4,,Store,
+R0110,03/29/2024 03:57,18-24,2,1,9,Chat;Phone;Store,"Delivery was late
+but support helped"
+R0111,03/19/2024 01:43,45-54,2,2,10,Email,"Staff said ""please wait"", took 20 mins"
+R0112,03/13/2024 23:58,55+,2,3,,Chat;Phone;Store,"Great service, will come back!"
+R0113,03/19/2024 14:28,55+,2,5,8,Email;Phone;Store,
+R0114,03/28/2024 20:21,45-54,1,5,,Email;Phone;Store,App crashes on login; please fix
+R0115,03/16/2024 19:13,18-24,2,4,0,Phone;Store,
+R0116,03/07/2024 17:07,45-54,1,4,0,Chat;Email;Phone,Okay overall
+R0117,03/06/2024 11:46,35-44,2,5,9,Email;Store,"Delivery was late
+but support helped"
+R0118,03/12/2024 21:36,55+,1,1,0,Email,
+R0119,03/19/2024 03:38,18-24,1,5,1,Email;Phone;Store,"Delivery was late
+but support helped"
+R0120,03/01/2024 20:42,18-24,2,5,7,Chat;Phone;Store,
+R0121,03/05/2024 21:47,25-34,2,4,0,Email;Phone;Store,"Too expensive, but good quality"
+R0122,03/19/2024 22:34,18-24,1,5,0,Store,Okay overall
+R0123,03/19/2024 20:43,45-54,1,1,4,Chat;Email;Phone,App crashes on login; please fix
+R0124,03/08/2024 21:04,35-44,2,5,3,Chat,App crashes on login; please fix
+R0125,03/13/2024 23:10,45-54,2,5,8,Store,"Delivery was late
+but support helped"
+R0126,03/28/2024 20:32,45-54,3,1,10,Phone,
+R0127,03/16/2024 13:01,45-54,2,4,,Chat,"Delivery was late
+but support helped"
+R0128,03/04/2024 00:44,25-34,2,2,9,Phone,"Great service, will come back!"
+R0129,03/25/2024 01:42,45-54,2,3,5,Phone,"Too expensive, but good quality"
+R0130,03/12/2024 21:04,18-24,1,3,4,Email;Store,"Great service, will come back!"
+R0131,03/19/2024 02:38,45-54,2,4,5,Chat;Phone;Store,"Great service, will come back!"
+R0132,03/24/2024 03:55,25-34,1,5,10,Chat;Phone;Store,Okay overall
+R0133,03/03/2024 14:09,35-44,2,5,6,Store,Okay overall
+R0134,03/18/2024 02:20,55+,1,4,5,Email;Phone;Store,"Staff said ""please wait"", took 20 mins"
+R0135,03/09/2024 11:24,18-24,2,3,6,Email,
+R0136,03/06/2024 20:28,25-34,2,3,5,Chat;Email;Phone,"Delivery was late
+but support helped"
+R0137,03/15/2024 09:11,55+,2,4,1,Chat;Phone;Store,"Too expensive, but good quality"
+R0138,03/19/2024 13:43,18-24,2,4,10,Chat;Email;Store,
+R0139,03/20/2024 15:18,18-24,1,3,1,Email;Phone,
+R0140,03/10/2024 14:56,25-34,2,4,,Chat;Phone;Store,"Too expensive, but good quality"
+R0141,03/18/2024 20:26,35-44,1,5,0,Chat;Email;Store,"Great service, will come back!"
+R0142,03/15/2024 13:15,55+,2,4,4,Phone,
+R0143,03/05/2024 21:14,35-44,1,3,6,Phone,Okay overall
+R0144,03/10/2024 12:52,55+,2,2,4,Phone;Store,"Too expensive, but good quality"
+R0145,03/08/2024 18:33,45-54,2,4,5,Chat;Email,"Staff said ""please wait"", took 20 mins"
+R0146,03/21/2024 23:29,25-34,1,5,2,Chat;Phone;Store,
+R0147,03/07/2024 12:17,35-44,1,5,0,Chat,"Staff said ""please wait"", took 20 mins"
+R0148,03/24/2024 04:39,55+,1,2,,Chat,"Great service, will come back!"
+R0149,03/16/2024 00:42,55+,2,3,10,Email;Phone,"Too expensive, but good quality"
+R0150,03/07/2024 10:36,55+,1,1,5,Store,"Too expensive, but good quality"
+R0151,03/17/2024 19:05,55+,2,4,6,Phone,
+R0152,03/24/2024 13:25,35-44,2,3,7,Chat;Phone;Store,Okay overall
+R0153,03/07/2024 08:39,35-44,1,5,,Chat;Store,"Staff said ""please wait"", took 20 mins"
+R0154,03/09/2024 19:55,25-34,2,3,1,Email;Phone;Store,"Great service, will come back!"
+R0155,03/23/2024 15:41,45-54,2,4,8,Chat;Email;Store,
+R0156,03/06/2024 14:49,55+,2,5,7,Chat;Phone;Store,"Too expensive, but good quality"
+R0157,03/10/2024 17:52,35-44,1,2,8,Chat,
+R0158,03/30/2024 21:08,25-34,1,5,1,Email;Phone;Store,"Delivery was late
+but support helped"
+R0159,03/30/2024 01:48,25-34,2,3,6,Chat;Email;Store,"Delivery was late
+but support helped"
+R0160,03/20/2024 21:59,35-44,2,4,6,Email,
+R0161,03/14/2024 10:59,18-24,1,5,8,Phone;Store,"Too expensive, but good quality"
+R0162,03/14/2024 03:28,35-44,2,5,6,Phone,"Delivery was late
+but support helped"
+R0163,03/16/2024 08:23,55+,2,1,2,Chat;Phone;Store,"Delivery was late
+but support helped"
+R0164,03/15/2024 15:10,25-34,1,3,1,Email,Okay overall
+R0165,03/26/2024 10:22,55+,2,5,5,Email,Okay overall
+R0166,03/16/2024 08:33,45-54,2,4,7,Chat,"Delivery was late
+but support helped"
+R0167,03/01/2024 19:59,45-54,2,4,5,Phone,"Delivery was late
+but support helped"
+R0168,03/25/2024 04:29,35-44,2,3,8,Chat;Phone,"Too expensive, but good quality"
+R0169,03/30/2024 20:29,55+,2,5,2,Email,"Too expensive, but good quality"
+R0170,03/15/2024 20:04,55+,3,4,10,Chat;Store,"Too expensive, but good quality"
+R0171,03/25/2024 19:06,25-34,2,3,5,Chat;Email,
+R0172,03/21/2024 09:41,45-54,1,5,7,Chat;Store,"Great service, will come back!"
+R0173,03/27/2024 10:13,18-24,2,4,8,Store,"Great service, will come back!"
+R0174,03/04/2024 12:37,45-54,1,5,10,Email,
+R0175,03/20/2024 14:25,25-34,1,4,7,Chat;Store,
+R0176,03/29/2024 15:24,45-54,1,3,0,Email;Phone;Store,
+R0177,03/28/2024 05:47,18-24,1,4,10,Chat;Email;Store,"Delivery was late
+but support helped"
+R0178,03/07/2024 18:10,25-34,2,5,,Email;Phone,"Staff said ""please wait"", took 20 mins"
+R0179,03/18/2024 05:50,35-44,1,5,0,Email;Phone;Store,"Great service, will come back!"
+R0180,03/18/2024 14:55,35-44,2,4,8,Phone;Store,"Staff said ""please wait"", took 20 mins"
+R0181,03/26/2024 17:47,35-44,1,4,5,Email;Phone;Store,"Great service, will come back!"
+R0182,03/23/2024 12:50,45-54,2,5,0,Store,"Delivery was late
+but support helped"
+R0183,03/10/2024 02:10,45-54,2,4,2,Email;Store,Okay overall
+R0184,03/05/2024 10:51,18-24,1,3,10,Chat;Phone;Store,"Staff said ""please wait"", took 20 mins"
+R0185,03/10/2024 22:15,45-54,2,4,0,Email;Store,
+R0186,03/25/2024 21:19,35-44,1,3,1,Store,"Staff said ""please wait"", took 20 mins"
+R0187,03/11/2024 11:03,35-44,2,2,9,Chat;Email;Phone,App crashes on login; please fix
+R0188,03/07/2024 18:18,35-44,2,5,4,Chat,Okay overall
+R0189,03/20/2024 12:20,35-44,1,4,0,Phone,"Staff said ""please wait"", took 20 mins"
+R0190,03/08/2024 05:36,18-24,2,2,1,Chat;Store,App crashes on login; please fix
+R0191,03/27/2024 09:54,18-24,1,4,4,Chat,"Great service, will come back!"
+R0192,03/13/2024 16:32,18-24,2,3,4,Chat;Email;Store,"Too expensive, but good quality"
+R0193,03/21/2024 17:28,25-34,1,3,4,Chat;Email;Phone,"Too expensive, but good quality"
+R0194,03/18/2024 15:41,55+,2,4,2,Store,Okay overall
+R0195,03/09/2024 08:11,45-54,2,5,3,Chat;Email;Phone,"Too expensive, but good quality"
+R0196,03/22/2024 21:39,55+,2,5,5,Email;Store,"Great service, will come back!"
+R0197,03/26/2024 18:01,35-44,2,4,7,Email;Phone,"Great service, will come back!"
+R0198,03/04/2024 11:54,35-44,1,5,6,Email;Phone;Store,"Delivery was late
+but support helped"
+R0199,03/16/2024 11:22,18-24,1,4,3,Chat;Phone;Store,
+R0200,03/22/2024 12:45,45-54,2,2,10,Store,App crashes on login; please fix
+R0201,03/11/2024 21:49,25-34,1,3,3,Email;Phone,"Delivery was late
+but support helped"
+R0202,03/04/2024 13:45,55+,1,1,9,Chat,
+R0203,03/25/2024 22:42,55+,1,5,10,Email;Store,
+R0204,03/07/2024 06:00,18-24,1,4,4,Chat;Phone;Store,"Great service, will come back!"
+R0205,03/15/2024 11:34,18-24,1,4,7,Email;Phone,"Delivery was late
+but support helped"
+R0206,03/13/2024 12:37,25-34,2,3,2,Chat;Email;Phone,Okay overall
+R0207,03/20/2024 11:38,45-54,2,4,3,Email;Phone;Store,"Delivery was late
+but support helped"
+R0208,03/02/2024 17:21,25-34,2,5,9,Chat;Email,"Too expensive, but good quality"
+R0209,03/07/2024 08:27,18-24,2,4,7,Chat;Phone;Store,"Staff said ""please wait"", took 20 mins"
+R0210,03/28/2024 20:07,35-44,2,1,4,Chat;Email,"Too expensive, but good quality"
+R0211,03/24/2024 04:19,35-44,1,3,8,Chat;Email;Store,"Too expensive, but good quality"
+R0212,03/22/2024 11:01,18-24,1,5,3,Chat,
+R0213,03/25/2024 15:07,55+,2,4,8,Store,
+R0214,03/14/2024 19:13,55+,2,5,5,Store,App crashes on login; please fix
+R0215,03/03/2024 10:50,25-34,2,5,2,Phone,
+R0216,03/18/2024 08:12,45-54,3,4,3,Email;Phone;Store,"Great service, will come back!"
+R0217,03/04/2024 06:11,25-34,1,5,8,Email;Phone;Store,
+R0218,03/08/2024 11:16,45-54,2,3,9,Chat;Email;Phone,"Great service, will come back!"
+R0219,03/23/2024 03:47,55+,2,5,6,Chat,"Staff said ""please wait"", took 20 mins"
+R0220,03/26/2024 18:55,25-34,1,5,,Chat;Phone,"Delivery was late
+but support helped"
+R0221,03/02/2024 12:53,25-34,1,4,,Chat;Email;Store,"Staff said ""please wait"", took 20 mins"
+R0222,03/19/2024 19:39,18-24,2,4,3,Email,
+R0223,03/11/2024 17:56,55+,1,3,8,Chat;Email,"Delivery was late
+but support helped"
+R0224,03/02/2024 18:39,25-34,2,5,7,Email,"Too expensive, but good quality"
+R0225,03/06/2024 14:54,55+,2,4,,Store,Okay overall
+R0226,03/21/2024 19:29,18-24,2,4,0,Chat;Email,"Staff said ""please wait"", took 20 mins"
+R0227,03/09/2024 07:12,25-34,1,4,2,Phone,
+R0228,03/09/2024 22:14,55+,2,5,6,Email;Phone;Store,"Staff said ""please wait"", took 20 mins"
+R0229,03/25/2024 06:09,18-24,2,4,9,Chat;Phone,"Delivery was late
+but support helped"
+R0230,03/11/2024 09:09,25-34,1,5,10,Email;Phone,App crashes on login; please fix
+R0231,03/12/2024 22:57,45-54,2,3,6,Chat,"Great service, will come back!"
+R0232,03/19/2024 23:38,25-34,1,4,0,Email;Store,
+R0233,03/14/2024 22:04,45-54,1,4,3,Chat,"Too expensive, but good quality"
+R0234,03/11/2024 00:33,18-24,1,4,1,Chat;Email;Store,"Great service, will come back!"
+R0235,03/07/2024 19:44,18-24,1,1,5,Email;Store,
+R0236,03/29/2024 20:33,55+,2,5,1,Phone,
+R0237,03/06/2024 14:51,35-44,2,4,2,Phone,"Too expensive, but good quality"
+R0238,03/07/2024 04:35,25-34,1,2,2,Store,"Too expensive, but good quality"
+R0239,03/29/2024 04:36,35-44,2,3,6,Email;Phone;Store,Okay overall
+R0240,03/29/2024 15:55,18-24,1,4,8,Email,
+R0241,03/10/2024 06:54,25-34,2,4,4,Chat;Email,
+R0242,03/04/2024 19:11,55+,2,4,6,Phone,
+R0243,03/12/2024 23:47,18-24,2,5,5,Chat;Email;Store,"Delivery was late
+but support helped"
+R0244,03/21/2024 21:41,45-54,1,4,10,Chat;Email,
+R0245,03/05/2024 15:41,18-24,1,5,2,Chat;Store,
+R0246,03/05/2024 13:04,45-54,2,4,4,Chat,App crashes on login; please fix
+R0247,03/17/2024 03:04,35-44,1,4,1,Chat;Store,"Great service, will come back!"
+R0248,03/23/2024 00:46,35-44,1,3,7,Store,
+R0249,03/23/2024 04:44,35-44,1,5,9,Phone;Store,Okay overall
+R0250,03/30/2024 08:09,45-54,1,1,0,Chat,"Too expensive, but good quality"
