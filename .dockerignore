@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+web
+.cache
+logs
+samples
+**/__pycache__
+**/*.pyc
+.DS_Store
+*.zip
