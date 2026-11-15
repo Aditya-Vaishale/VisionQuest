@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -18,6 +19,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from engine.agent import Question
+from engine import timing
 from engine.discover import load_csv_bytes, profile_table
 from engine.llm import LLMClient, get_llm
 from engine.pipeline import Pipeline, StageCache
@@ -78,9 +80,12 @@ class Job:
         """Called in the job thread when the AI asks: wait for the user's answer (or time out)."""
         self._answered.clear()
         self.touch(status="needs_answer", question=q, _reply="")
+        asked = time.perf_counter()
         answered = self._answered.wait(ANSWER_TIMEOUT_S)
+        timing.waited_for_user(time.perf_counter() - asked, answered)
         reply = self._reply if answered and self._reply else (q.options[0] if q.options else "no preference")
-        self.touch(status="running", question=None)
+        if self.status == "needs_answer":            # not if the analysis was stopped meanwhile
+            self.touch(status="running", question=None)
         return reply
 
     def answer(self, text: str) -> None:
@@ -89,13 +94,22 @@ class Job:
         self._reply = text.strip()
         self._answered.set()
 
+    def cancel(self, reason: str) -> None:
+        """Stop this analysis at its next AI call; a waiting question is released at once."""
+        if self.status not in ("queued", "running", "needs_answer"):
+            return
+        timing.cancel(self.id)
+        self.touch(status="failed", error=f"Stopped: {reason}", question=None)
+        self._answered.set()
+
 def _reused(outcome: Any) -> bool:
     run = getattr(outcome, "run", None) or (outcome.runs[0] if getattr(outcome, "runs", None) else None)
     return bool(run is not None and run.message == REUSED)
 
 def _step(job: Job, stage: str, work: Callable[[], Any]) -> Any:
     job.mark(stage, "running")
-    outcome = work()
+    with timing.stage(stage, job.id):
+        outcome = work()
     job.mark(stage, "reused" if _reused(outcome) else "done")
     return outcome
 
@@ -108,8 +122,9 @@ def run_job(job: Job, llm: LLMClient, reviewer: LLMClient, cache: StageCache | N
     try:
         job.touch(status="running")
         raw = _step(job, "discover", lambda: load_csv_bytes(job.data, file_name=job.file_name))
-        facts = profile_table(raw.df, raw.load)
-        pipe = Pipeline(llm, raw, facts, job.data, answer=job.ask, cache=cache)
+        with timing.stage("prepare", job.id):
+            facts = profile_table(raw.df, raw.load)
+            pipe = Pipeline(llm, raw, facts, job.data, answer=job.ask, cache=cache)
         job.touch(pipe=pipe, data=b"")                 # the file now lives in the locked SQL room
         cleaned = _step(job, "clean", pipe.clean)
         if cleaned.result is None or cleaned.facts is None:
@@ -127,7 +142,7 @@ def run_job(job: Job, llm: LLMClient, reviewer: LLMClient, cache: StageCache | N
         if vis.plan is None:
             return _fail(job, "visualize", vis.run.message)
         job.mark("dashboard", "running")
-        with job.lock:
+        with timing.stage("dashboard", job.id), job.lock:
             spec = build_dashboard(pipe.box, vis.plan, vis.charts, val)
         spec.update(filtered=False, filters_applied=[])
         job.touch(card=reasoned.card, val=val, vis=vis, dashboard=spec)
@@ -135,6 +150,8 @@ def run_job(job: Job, llm: LLMClient, reviewer: LLMClient, cache: StageCache | N
         job.touch(status="done", stage="")
     except Exception as exc:  # a job thread must never die silently
         _fail(job, job.stage or "discover", f"{type(exc).__name__}: {str(exc)[:300]}")
+    finally:
+        timing.run_summary(job.status)
 
 # ----------------------------------------------------------------------------- filters (no AI)
 
@@ -196,6 +213,8 @@ class JobStore:
 
     def start(self, file_name: str, data: bytes) -> Job:
         with self._lock:
+            for other in self._jobs.values():          # one at a time: a new upload stops any older run
+                other.cancel("a new analysis was started")
             running = sum(j.status in ("queued", "running", "needs_answer") for j in self._jobs.values())
             if running >= MAX_RUNNING:
                 raise Busy(f"{running} analyses are already running; wait for one to finish.")

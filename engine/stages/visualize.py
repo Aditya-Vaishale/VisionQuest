@@ -14,7 +14,7 @@ from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-
+from pydantic import BaseModel, Field, field_validator
 from engine.agent import Agent, Budget, RunResult, Stage, Workspace
 from engine.agent.tools import Tool, ToolOutcome, failure, register
 from engine.sql import QueryError, QueryResult, Sandbox, quote_ident
@@ -22,6 +22,8 @@ from engine.sql.results import jsonable
 from engine.stages.calculate import BASE, Metric
 from engine.stages.reason import UnderstandingCard
 from engine.stages.validate import ValidateOutcome, result_numbers, untraceable
+from engine.stages.validate import ValidateOutcome, context_numbers, result_numbers, sql_numbers, untraceable
+
 
 ChartKind = Literal["kpi", "line", "area", "bar", "stacked_bar", "grouped_bar", "pie", "scatter", "table"]
 Size = Literal["S", "M", "L", "XL"]       # quarter, half, three-quarter, full width
@@ -60,6 +62,18 @@ class ChartArgs(BaseModel):
     size: Size = Field(description="S = quarter width (kpi), M = half, L = three quarters, XL = full width")
     section: str = Field(description="Section heading, e.g. Overview, Trends, Breakdowns")
     priority: int = Field(ge=1, le=100, description="1 = most important; shown first")
+    @field_validator("x", "series", mode="before")
+    @classmethod
+    def _one_name(cls, value: Any) -> Any:
+        """The AI sometimes sends a column as a list or as list text ('["age_group"]'); keep the one name."""
+        if isinstance(value, str) and value.strip().startswith("["):
+            try:
+                value = json.loads(value)
+            except ValueError:
+                return value
+        if isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
+            return value[0]
+        return value
 
 # ----------------------------------------------------------------------------- chart facts (Python)
 
@@ -192,7 +206,8 @@ def _save_chart(args: ChartArgs, ws: Workspace) -> ToolOutcome:
         return failure("invalid_name", f"Invalid chart id {chart!r}.", "Use snake_case, e.g. revenue_by_region_bar.")
     result = ws.sandbox.run(metric.sql, purpose=f"chart {chart}", tables=(BASE,))
     problems, facts = chart_problems(args, metric, result)
-    allowed = result_numbers([[jsonable(v) for v in r] for r in result.rows]) + ([float(args.top_n)] if args.top_n else [])
+    allowed = (result_numbers([[jsonable(v) for v in r] for r in result.rows]) + sql_numbers(metric.sql)
+               + context_numbers(ws.sandbox) + ([float(args.top_n)] if args.top_n else []))
     made_up = untraceable(f"{args.title} {args.subtitle}", allowed)
     if made_up:
         problems.append(f"title or subtitle quotes numbers that are not in the result: {made_up}.")
@@ -259,7 +274,9 @@ def check_visualize(plan: DashboardPlan, ws: Workspace) -> list[str]:
             count = ws.sandbox.trusted_query(f"SELECT count(DISTINCT {quote_ident(f.column)}) FROM {BASE}", 1)[0][0]
             if count > MAX_CATEGORY_OPTIONS:
                 problems.append(f"Filter {f.column!r} has {count} values; at most {MAX_CATEGORY_OPTIONS} for a category filter.")
-    made_up = untraceable(f"{plan.title} {plan.subtitle}", ws.artifacts.get("visualize_numbers", []))
+    known = ws.artifacts.get("visualize_numbers", []) + context_numbers(ws.sandbox)
+    known += [v for m in metrics.values() for v in sql_numbers(m.sql)]
+    made_up = untraceable(f"{plan.title} {plan.subtitle}", known)
     if made_up:
         problems.append(f"title or subtitle quotes numbers that are not in any result: {made_up}.")
     return problems[:15]

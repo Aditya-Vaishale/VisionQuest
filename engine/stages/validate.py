@@ -14,12 +14,15 @@ import json
 import math
 import re
 from collections.abc import Callable
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 from engine.agent import Agent, Budget, Question, RunResult, Stage, Workspace
+from engine import timing
 from engine.agent.tools import Tool, ToolOutcome, failure, register
 from engine.llm import LLMClient, LLMError
 from engine.sql import QueryError, QueryResult, Sandbox
@@ -30,11 +33,15 @@ from engine.stages.calculate import (
 from engine.stages.calculate import _outcome as calculate_outcome
 from engine.stages.clean import CLEAN
 from engine.stages.reason import UnderstandingCard
+from engine.sql import QueryError, QueryResult, Sandbox, quote_ident
+
 
 CARD_BUDGET = 8_000        # characters of the card given to the AIs
 METRICS_BUDGET = 24_000    # characters of metric definitions, rows and facts
 RESULT_ROWS = 60           # rows per metric Python keeps for the AIs and the text check
 APPROVED = ("approve", "approve_with_note")
+REVIEW_WORKERS = 10
+REVIEW_MAX_TOKENS = 6_000
 Answer = Callable[[Question], str]
 
 _DATE_TIME = re.compile(r"\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?|\b\d{1,2}:\d{2}(?::\d{2})?\b")
@@ -100,6 +107,8 @@ def result_numbers(rows: list[list[Any]]) -> list[float]:
                 out.append(float(v))
             elif isinstance(v, str) and (m := _DATE_PARTS.match(v)):
                 out += [float(m.group(1)), float(m.group(2)), float(m.group(3))]
+    for column in zip(*rows):                       # how many different values each column has, e.g. "30 weeks"
+        out.append(float(len({str(v) for v in column})))
     return out
 
 
@@ -114,6 +123,28 @@ def untraceable(text: str, allowed: list[float]) -> list[str]:
             found.append(m.group(0))
     return list(dict.fromkeys(found))
 
+def sql_numbers(sql: str) -> list[float]:
+    """Numbers written in a metric's own query (thresholds, limits, date filters): its text may quote them."""
+    out = [float(p) for parts in _DATE_PARTS.findall(sql) for p in parts]
+    for m in _NUMBER.finditer(_DATE_TIME.sub(" ", sql)):
+        sign, digits, _ = m.groups()
+        out.append(float(digits.replace(",", "")) * (-1 if sign else 1))
+    return out
+
+def context_numbers(box: Sandbox) -> list[float]:
+    """Numbers any text may quote because Python measured them on base: its row count, and the year,
+    month and day of the first and last value in each date column (e.g. '2024' in a title)."""
+    dates = [c for c, t in box.schema().get(BASE, []) if "DATE" in t.upper() or "TIMESTAMP" in t.upper()]
+    parts = ["count(*)"] + [f"min({quote_ident(c)}), max({quote_ident(c)})" for c in dates]
+    try:
+        row = box.trusted_query(f"SELECT {', '.join(parts)} FROM {BASE}", max_rows=1)[0]
+    except (QueryError, IndexError):
+        return []
+    out = [float(row[0])]
+    for v in row[1:]:
+        if hasattr(v, "year"):
+            out += [float(v.year), float(v.month), float(v.day)]
+    return out
 
 # ----------------------------------------------------------------------------- the two-ways comparison
 
@@ -161,6 +192,7 @@ class MetricFacts:
     nulls: dict[str, int] = field(default_factory=dict)
     ranges: dict[str, list[float]] = field(default_factory=dict)   # measure -> [min, max, sum]
     text_numbers: list[str] = field(default_factory=list)          # numbers in its text its result lacks
+    sql_numbers: list[float] = field(default_factory=list)
     result: list[list[Any]] = field(default_factory=list)          # first rows, shown to the AIs
 
     def notes(self) -> list[str]:
@@ -195,7 +227,9 @@ def measure(box: Sandbox, metric: Metric) -> MetricFacts:
         values = [float(r[index[c]]) for r in rows if c in index and _is_num(r[index[c]])]
         if values:
             facts.ranges[c] = [min(values), max(values), sum(values)]
-    facts.text_numbers = untraceable(" ".join([metric.meaning, *metric.assumptions]), result_numbers(rows))
+    facts.sql_numbers = sql_numbers(metric.sql) + context_numbers(box)
+    facts.text_numbers = untraceable(" ".join([metric.meaning, *metric.assumptions]),
+                                     result_numbers(rows) + facts.sql_numbers)
     return facts
 
 
@@ -275,42 +309,50 @@ def _json_object(text: str) -> Any:
     return json.loads(text[start: end + 1] if 0 <= start < end else text)
 
 
-def review(llm: LLMClient, card: UnderstandingCard, metrics: list[Metric],
-           facts: dict[str, MetricFacts]) -> dict[str, Review]:
-    """One fresh conversation with no tools and no knowledge of how the metrics were built.
-    If the reviewer cannot answer, every metric counts as a concern ("not reviewed"): nothing passes unseen."""
-    names = [m.name for m in metrics]
+def _review_one(llm: LLMClient, card_text: str, metric: Metric,
+                facts: dict[str, MetricFacts]) -> tuple[Review | None, str]:
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": REVIEWER_PROMPT},
-        {"role": "user", "content": f"Understanding card:\n{_card_text(card)}\n\n"
-                                    f"Metrics to review ({len(names)}):\n{metrics_brief(metrics, facts)}"},
+        {"role": "user", "content": f"Understanding card:\n{card_text}\n\n"
+                                    f"Metric to review (1):\n{metrics_brief([metric], facts)}"},
     ]
-    sheet: ReviewSheet | None = None
     problem = "no reply"
     for _ in range(2):
         try:
-            reply = llm.chat(messages, thinking=True, json_mode=True, max_output_tokens=16_000)
+            reply = llm.chat(messages, thinking=True, json_mode=True, max_output_tokens=REVIEW_MAX_TOKENS)
         except LLMError as err:
-            problem = f"reviewer unavailable ({err.kind})"
-            break
+            return None, f"reviewer unavailable ({err.kind})"
         try:
             sheet = ReviewSheet.model_validate(_json_object(reply.content))
-            break
         except ValueError as exc:
             problem = f"reviewer reply was not valid ({str(exc)[:120]})"
             messages += [{"role": "assistant", "content": reply.content},
                          {"role": "user", "content": f"That was not valid: {str(exc)[:300]}. "
                                                      "Reply again with only the JSON object."}]
-    found = {r.metric.strip().casefold(): r for r in sheet.reviews} if sheet else {}
-    out: dict[str, Review] = {}
-    for name in names:
-        r = found.get(name.casefold())
-        if r is not None:
-            out[name] = Review(metric=name, status=r.status, reason=r.reason.strip())
-        else:
-            why = problem if sheet is None else "missing from the reviewer's reply"
-            out[name] = Review(metric=name, status="concern", reason=f"not reviewed: {why}")
-    return out
+            continue
+        found = next((r for r in sheet.reviews if r.metric.strip().casefold() == metric.name.casefold()), None)
+        if found is None and len(sheet.reviews) == 1:
+            found = sheet.reviews[0]                  # one metric, one answer: a misspelt name still counts
+        if found is None:
+            return None, "missing from the reviewer's reply"
+        return Review(metric=metric.name, status=found.status, reason=found.reason.strip()), ""
+    return None, problem
+
+def review(llm: LLMClient, card: UnderstandingCard, metrics: list[Metric],
+           facts: dict[str, MetricFacts]) -> dict[str, Review]:
+    """One fresh conversation per metric, all sent at the same time, with no tools and no knowledge of how
+    the metrics were built. A metric the reviewer cannot answer counts as a concern: nothing passes unseen."""
+    card_text = _card_text(card)
+    context = timing.capture()
+
+    def one(m: Metric) -> tuple[Review | None, str]:
+        with timing.attach(context):
+            return _review_one(llm, card_text, m, facts)
+
+    with ThreadPoolExecutor(max_workers=min(REVIEW_WORKERS, max(1, len(metrics)))) as pool:
+        answers = list(pool.map(one, metrics))
+    return {m.name: r if r is not None else Review(metric=m.name, status="concern", reason=f"not reviewed: {why}")
+            for m, (r, why) in zip(metrics, answers)}
 
 
 # ----------------------------------------------------------------------------- the second way (a tool)
@@ -372,8 +414,33 @@ class ValidateResult(BaseModel):
 
 def allowed_numbers(names: list[str], facts: dict[str, MetricFacts]) -> list[float]:
     """Numbers a note may quote: those in the results of these (approved) metrics."""
-    return [v for n in names if n in facts for v in result_numbers(facts[n].result)]
+    return [v for n in names if n in facts for v in [*result_numbers(facts[n].result), *facts[n].sql_numbers]]
 
+def _verdict_problems(v: Verdict, facts: dict[str, MetricFacts], reviews: dict[str, Review],
+                      ways: dict[str, list[dict[str, Any]]]) -> list[str]:
+    """What stops one verdict on its own. The note-number check needs all approvals, so it stays separate."""
+    name = v.metric.strip()
+    f, r = facts.get(name), reviews.get(name)
+    problems: list[str] = []
+    if v.verdict in APPROVED:
+        if not any(w["matched"] for w in ways.get(name, [])):
+            problems.append(f"{name}: an approval needs a second way that matched (use second_way).")
+        if f is not None and (f.error or not f.reruns_same):
+            problems.append(f"{name}: cannot be approved: {'; '.join(f.notes()[:2])}.")
+    if v.verdict == "approve":
+        if r is not None and r.status == "concern" and not v.concern_answer.strip():
+            problems.append(f"{name}: the reviewer raised a concern; explain in concern_answer why it does not "
+                            "apply, or use fix or drop.")
+        if f is not None and f.text_numbers:
+            problems.append(f"{name}: its meaning quotes numbers its result lacks ({', '.join(f.text_numbers)}); "
+                            "use fix, or approve_with_note with a caveat that explains them in words "
+                            "(a note may not repeat them).")
+
+    if v.verdict == "approve_with_note" and not v.note.strip():
+        problems.append(f"{name}: approve_with_note needs a note.")
+    if v.verdict in ("fix", "drop") and not v.reason.strip():
+        problems.append(f"{name}: say why ({v.verdict}).")
+    return problems
 
 def check_validate(result: ValidateResult, ws: Workspace) -> list[str]:
     """Refuse verdicts that are not backed by evidence."""
@@ -393,26 +460,8 @@ def check_validate(result: ValidateResult, ws: Workspace) -> list[str]:
     if twice:
         problems.append(f"Give one verdict per metric; repeated: {twice}.")
     for v in result.verdicts:
-        name = v.metric.strip()
-        if name not in names:
-            continue
-        f, r = facts.get(name), reviews.get(name)
-        if v.verdict in APPROVED:
-            if not any(w["matched"] for w in ways.get(name, [])):
-                problems.append(f"{name}: an approval needs a second way that matched (use second_way).")
-            if f is not None and (f.error or not f.reruns_same):
-                problems.append(f"{name}: cannot be approved: {'; '.join(f.notes()[:2])}.")
-        if v.verdict == "approve":
-            if r is not None and r.status == "concern" and not v.concern_answer.strip():
-                problems.append(f"{name}: the reviewer raised a concern; explain in concern_answer why it does not "
-                                "apply, or use fix or drop.")
-            if f is not None and f.text_numbers:
-                problems.append(f"{name}: its meaning quotes numbers its result lacks ({', '.join(f.text_numbers)}); "
-                                "use fix, or approve_with_note explaining them.")
-        if v.verdict == "approve_with_note" and not v.note.strip():
-            problems.append(f"{name}: approve_with_note needs a note.")
-        if v.verdict in ("fix", "drop") and not v.reason.strip():
-            problems.append(f"{name}: say why ({v.verdict}).")
+        if v.metric.strip() in names:
+            problems += _verdict_problems(v, facts, reviews, ways)
     approved = [v.metric.strip() for v in result.verdicts if v.verdict in APPROVED and v.metric.strip() in names]
     allowed = allowed_numbers(approved, facts)
     texts = [(f"note on {v.metric}", v.note) for v in result.verdicts if v.note.strip()]
@@ -452,8 +501,9 @@ For each metric:
    reader should read the number (e.g. what is left out, a partial period, an assumed meaning). Never write
    about the checking itself (second ways, cross-checks, matching totals) or about bugs and repairs; those
    belong in the verdict's reason. Most approved metrics need no caveat.
-6. You may call several tools in one reply. Then call finish with one verdict per metric, plus any
-   dashboard-level notes."""
+6. Work in batches to save time: send the second_way calls for ALL metrics in one reply, read the
+   results together, then dig into only the ones that did not match. Then call finish with one verdict
+   per metric, plus any dashboard-level notes."""
 
 VALIDATE_STAGE = Stage(
     name="validate",
@@ -520,6 +570,8 @@ def _check_round(agent: Agent, reviewer: LLMClient, card: UnderstandingCard,
     for m in metrics:
         ways.pop(m.name, None)                     # an old proof does not count for a new or changed metric
     ws.artifacts.update(validate_names=[m.name for m in metrics], validate_facts=facts, validate_reviews=reviews)
+    ws.artifacts.pop("refused_validate", None)
+    ws.artifacts.pop("refused_validate", None) 
     task = (f"Check these {len(metrics)} metrics: {', '.join(m.name for m in metrics)}.\n\n"
             f"Understanding card:\n{_card_text(card)}\n\n"
             f"Metrics (definition, Python's facts, result, independent review):\n"
@@ -529,6 +581,31 @@ def _check_round(agent: Agent, reviewer: LLMClient, card: UnderstandingCard,
 
 def _drop_all(metrics: list[Metric], why: str) -> dict[str, Verdict]:
     return {m.name: Verdict(metric=m.name, verdict="drop", reason=why) for m in metrics}
+
+def _salvage(ws: Workspace, metrics: list[Metric], why: str) -> tuple[dict[str, Verdict], list[str]]:
+    """The checker stopped before an accepted finish. Keep each verdict from its last refused finish that
+    passes the checks on its own; every other metric is dropped with the reason."""
+    out = _drop_all(metrics, f"not validated: {why}")
+    last = ws.artifacts.pop("refused_validate", None)
+    if not isinstance(last, ValidateResult):
+        return out, []
+    facts, reviews = ws.artifacts.get("validate_facts", {}), ws.artifacts.get("validate_reviews", {})
+    ways = ws.artifacts.get("second_ways", {})
+    names, seen = {m.name for m in metrics}, set()
+    for v in last.verdicts:
+        name = v.metric.strip()
+        if name not in names or name in seen:
+            continue
+        seen.add(name)
+        problems = _verdict_problems(v, facts, reviews, ways)
+        out[name] = (Verdict(metric=name, verdict="drop", reason=f"not validated: {problems[0]}") if problems
+                     else v.model_copy(update={"metric": name}))
+    allowed = allowed_numbers([n for n, v in out.items() if v.verdict in APPROVED], facts)
+    for name, v in list(out.items()):
+        if v.verdict in APPROVED and v.note.strip() and untraceable(v.note, allowed):
+            out[name] = Verdict(metric=name, verdict="drop", reason="not validated: its note quotes numbers not in a result")
+    timing.event(f"checker stopped ({why}); kept {sum(v.verdict in APPROVED for v in out.values())} proven metrics")
+    return out, list(last.notes)
 
 def _mentions(text: str, names: set[str]) -> bool:
     """Does the text name any of these metrics (as a whole word)?"""
@@ -547,12 +624,14 @@ def run_validate(agent: Agent, reviewer: LLMClient, card: UnderstandingCard, cal
     out.runs.append(run)
     out.facts.update(facts)
     out.reviews.update(reviews)
-    if run.status != "finished" or not isinstance(run.output, ValidateResult):
-        out.verdicts = _drop_all(calc.metrics, f"not validated: {run.message or run.status}")
-        return out
+    if run.status == "finished" and isinstance(run.output, ValidateResult):
+        out.verdicts = {v.metric.strip(): v for v in run.output.verdicts}
+        notes = list(run.output.notes)
+    else:
+        out.verdicts, notes = _salvage(agent.ws, calc.metrics, run.message or run.status)
+        if not any(v.verdict in APPROVED for v in out.verdicts.values()):
+            return out                              # nothing proven: not saved, so the next upload tries again
     out.finished = True
-    out.verdicts = {v.metric.strip(): v for v in run.output.verdicts}
-    notes = list(run.output.notes)
 
     fixes = [(name, v.reason) for name, v in out.verdicts.items() if v.verdict == "fix"]
     if fixes:
@@ -592,4 +671,7 @@ def run_validate(agent: Agent, reviewer: LLMClient, card: UnderstandingCard, cal
     allowed = allowed_numbers([m.name for m in out.approved], out.facts)
     hidden = set(out.verdicts) - {m.name for m in out.approved}   # dropped metrics are not on the dashboard
     out.notes = [n for n in dict.fromkeys(notes) if not untraceable(n, allowed) and not _mentions(n, hidden)]
+    counts = Counter(v.verdict for v in out.verdicts.values())
+    timing.event(f"validate: {len(out.approved)} of {len(out.verdicts)} approved ("
+                 + ", ".join(f"{n} {k}" for k, n in counts.items()) + ")")
     return out

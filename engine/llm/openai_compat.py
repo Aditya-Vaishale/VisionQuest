@@ -6,6 +6,7 @@ import random
 import re
 import time
 from typing import Any
+from engine import timing
 
 from openai import (
     APIConnectionError,
@@ -26,6 +27,7 @@ from engine.llm.rate_limit import RateLimiter
 
 _RETRYABLE = (RateLimitError, APITimeoutError, APIConnectionError, InternalServerError)
 _THINK_BLOCK = re.compile(r"<think>(.*?)</think>", re.DOTALL)
+MAX_TIMEOUT_RETRIES = 1
 
 # Order matters: subclasses first (APITimeoutError is a kind of APIConnectionError).
 _ERROR_KINDS: list[tuple[type[Exception], str, str]] = [
@@ -67,24 +69,37 @@ class OpenAICompatibleClient:
             messages, tools, tool_choice, thinking, json_mode, max_output_tokens, temperature
         )
         last_attempt = self.settings.max_retries
+        timeouts = 0
 
         for attempt in range(last_attempt + 1):
+            timing.raise_if_cancelled()
+            asked = time.perf_counter()
             self._limiter.acquire()
             started = time.perf_counter()
             try:
                 raw = self._client.chat.completions.create(**params)
             except _RETRYABLE as exc:
                 self.meter.record_failure()
-                if attempt == last_attempt:
+                timeouts += isinstance(exc, APITimeoutError)
+                final = attempt == last_attempt or timeouts > MAX_TIMEOUT_RETRIES
+                pause = 0.0 if final else _backoff_seconds(exc, attempt)
+                timing.ai_call(started - asked, time.perf_counter() - started, thinking=thinking,
+                               error=type(exc).__name__, pause_s=pause)
+                if final:
                     raise _as_llm_error(exc) from exc
-                time.sleep(_backoff_seconds(exc, attempt))
+                time.sleep(pause)
                 continue
             except APIStatusError as exc:  # other 4xx: retrying will not help
                 self.meter.record_failure()
+                timing.ai_call(started - asked, time.perf_counter() - started, thinking=thinking,
+                               error=type(exc).__name__)
                 raise _as_llm_error(exc) from exc
 
             response = _parse(raw, time.perf_counter() - started)
             self.meter.record(response.usage, response.latency_s)
+            timing.ai_call(started - asked, response.latency_s, thinking=thinking,
+                           in_tokens=response.usage.input_tokens, out_tokens=response.usage.output_tokens,
+                           tools=[c.name for c in response.tool_calls])
 
             if not response.content and not response.tool_calls:
                 hint = " It ran out of room; raise max_output_tokens." if response.finish_reason == "length" else ""

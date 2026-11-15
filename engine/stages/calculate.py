@@ -28,6 +28,8 @@ from engine.stages.reason import UnderstandingCard
 BASE = "base"
 CARD_BUDGET = 12_000       # characters of the understanding card given to the AI
 MAX_METRICS = 15
+MAX_TIME_PERIODS = 60
+MIN_TIME_FILL = 0.5
 _NUMERIC = ("INT", "DOUBLE", "FLOAT", "DECIMAL", "REAL", "NUMERIC")
 _TEMPORAL = ("DATE", "TIMESTAMP")
 
@@ -91,6 +93,18 @@ def shape_problems(args: SaveMetricArgs, result: QueryResult, dims: list[str], m
     if args.shape in ("by_time", "by_time_and_category") and not any(
             any(k in types.get(d, "") for k in _TEMPORAL) for d in dims):
         problems.append(f"{args.shape} needs a DATE or TIMESTAMP dimension (use date_trunc).")
+    time_dims = [d for d in dims if any(k in types.get(d, "") for k in _TEMPORAL)]
+    if args.shape in ("by_time", "by_time_and_category") and time_dims and rows:
+        at = {c: i for i, c in enumerate(result.columns)}
+        periods = len({str(r[at[time_dims[0]]]) for r in rows})
+        if periods > MAX_TIME_PERIODS:
+            problems.append(f"{periods} periods is too many to read as a trend; use a coarser date_trunc "
+                            f"(at most {MAX_TIME_PERIODS} periods, e.g. week or month).")
+        others = [d for d in dims if d != time_dims[0] and d in at]
+        groups = len({tuple(str(r[at[d]]) for d in others) for r in rows}) if others else 1
+        if groups > 1 and len(rows) < MIN_TIME_FILL * periods * groups:
+            problems.append(f"Most groups have no value in most periods ({len(rows)} of {periods * groups} "
+                            "period-group pairs); use a coarser date_trunc so each group appears in each period.")
     if args.shape in ("by_category", "by_time_and_category", "distribution") and not dims:
         problems.append(f"{args.shape} needs at least one dimension.")
     if len(rows) > 1:
@@ -127,6 +141,20 @@ def _order_names(sql: str, columns: list[str]) -> set[str] | None:
             names.update(c.name.casefold() for c in node.find_all(exp.Column))
     return names
 
+def _add_tie_breaks(sql: str, columns: list[str], dims: list[str]) -> str:
+    """Add any dimension missing from the final ORDER BY. Only the order of tied rows changes, never a value."""
+    ordered = _order_names(sql, columns)
+    missing = [d for d in dims if ordered is not None and d.casefold() not in ordered and d in columns]
+    if not missing:
+        return sql
+    try:
+        tree = sqlglot.parse_one(sql, read="duckdb")
+        for d in missing:
+            tree = tree.order_by(exp.column(d, quoted=True), append=True, copy=False)
+        return tree.sql(dialect="duckdb")
+    except Exception:  # cannot rewrite it: the normal ORDER BY check will explain the problem
+        return sql
+
 def _save_metric(args: SaveMetricArgs, ws: Workspace) -> ToolOutcome:
     name = args.name.strip()
     if not RecipeBook.valid_name(name):
@@ -138,9 +166,21 @@ def _save_metric(args: SaveMetricArgs, ws: Workspace) -> ToolOutcome:
     actual = {c.casefold(): c for c in result.columns}
     dims = [actual.get(d.strip().casefold(), d.strip()) for d in args.dimensions]
     measures = [actual.get(m.strip().casefold(), m.strip()) for m in args.measures]
+    fixed = _add_tie_breaks(result.sql, result.columns, dims)
+    if fixed != result.sql:
+        result = ws.sandbox.run(fixed, purpose=f"metric {name} (tie-break added)", tables=(BASE,))
     problems = shape_problems(args, result, dims, measures)
     if problems:
         return failure("bad_metric", " | ".join(problems), "Fix the SQL or the shape fields, then save again.")
+    from engine.stages.validate import context_numbers, result_numbers, sql_numbers, untraceable
+    rows = [[jsonable(v) for v in row] for row in result.rows]
+    known = result_numbers(rows) + sql_numbers(result.sql) + context_numbers(ws.sandbox)
+    loose = untraceable(" ".join([args.meaning, *args.assumptions]), known)
+    if loose:
+        return failure("numbers_in_text", "The meaning or assumptions quote numbers that are not in the result "
+                       f"or the SQL: {', '.join(loose)}.",
+                       "Describe the metric in words (e.g. 'revenue on event days compared with normal days'); "
+                       "the dashboard shows the numbers from the result.")
     saved = ws.recipes.save(Metric(
         name=name, meaning=args.meaning.strip(), sql=result.sql,
         assumptions=[a.strip() for a in args.assumptions if a.strip()],
@@ -240,13 +280,17 @@ Steps:
    never average codes, identifiers or categories (count them or show shares);
    compute rates as sum(numerator) / sum(denominator), never as an average of rates, and name both;
    count distinct entities when rows repeat per entity.
-3. Time: if the card has a time column, build the main trend with date_trunc at its display grain, and
-   state in assumptions if the first or last period is partial.
+3. Time: if the card has a time column, build the main trend with date_trunc at a grain a reader can
+   follow: at most 60 periods, with every group present in most periods (e.g. month for half a year of
+   daily rows, week for a quarter). For a rate per period use sum(numerator) / sum(denominator) inside
+   the period. Split a trend by a category only when it has a few groups; otherwise show each group's
+   total as a breakdown. State in assumptions if the first or last period is partial.
 4. Breakdowns with many groups: keep the top N and put the rest in 'Other'. End multi-row results with
    an ORDER BY that includes every dimension as a tie-break (e.g. ORDER BY total DESC, region), so equal
    values always come back in the same order.
-5. Save each metric with save_metric; it runs the SQL and checks the result's shape. Test with query
-   first if unsure. You may call several tools in one reply.
+5. Save each metric with save_metric; it runs the SQL and checks the result's shape. Write meaning and
+   assumptions in words: a number in them must appear in the result or the SQL (Python refuses others).
+   Test with query first if unsure.
 6. Save the 6-12 metrics that matter most: a few headline single values, the main trend if time exists,
    and the most useful breakdowns. Then call finish: metric names in priority order, which metrics
    answer which question, dropped questions with reasons, and caveats in notes."""
@@ -259,7 +303,7 @@ CALCULATE_STAGE = Stage(
     tables=(BASE,),
     check=check_calculate,
     thinking=True,
-    budget=Budget(max_steps=24, max_output_tokens=150_000),
+    budget=Budget(max_steps=30, max_output_tokens=150_000),
 )
 
 @dataclass

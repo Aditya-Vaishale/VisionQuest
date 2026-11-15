@@ -237,7 +237,7 @@ REASON_STAGE = Stage(
     tables=(CLEAN,),
     check=check_reason,
     thinking=True,
-    budget=Budget(max_steps=18, max_output_tokens=120_000),
+    budget=Budget(max_steps=24, max_output_tokens=120_000),
 )
 
 @dataclass

@@ -16,7 +16,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-
+from engine import timing
 import duckdb
 import pandas as pd
 
@@ -278,6 +278,7 @@ class Sandbox:
         """Run with a time limit. fetch=None: run only; fetch=n: return the first n rows."""
         timer = threading.Timer(self.limits.timeout_s, self._con.interrupt)
         timer.daemon = True
+        started = time.perf_counter()
         timer.start()
         try:
             if fetch is None:
@@ -294,6 +295,7 @@ class Sandbox:
             raise QueryError("error", f"{type(exc).__name__}: {short(exc)}") from None
         finally:
             timer.cancel()
+            timing.sql(time.perf_counter() - started, sql)
 
     def _record(self, purpose: str, sql: object, outcome: str, started: float, *,
                 rows: int | None = None, message: str | None = None) -> None:

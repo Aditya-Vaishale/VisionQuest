@@ -3,7 +3,7 @@ Local API for the Adaptive CSV Analytics engine. The website talks only to this.
 
 Run (from the project folder; keep it running in its own terminal):
   python -m uvicorn api.app:app --host 127.0.0.1 --port 8000
-Interactive docs: http://127.0.0.1:8000/docs
+Every route except /health and /auth/* needs a login (see api/auth.py), including /docs.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from api.jobs import Busy, FilterIn, Job, JobStore, apply_filters
+from api.auth import allowed_origins, guard, router as auth_router
 from engine.discover.loader import MAX_FILE_MB
 from engine.sql import QueryError
 
@@ -25,10 +26,11 @@ async def lifespan(_app: FastAPI):
     yield
     store.close_all()
 
-app = FastAPI(title="Adaptive CSV Analytics API", version="0.1.0", lifespan=lifespan)
-ORIGINS = [o.strip() for o in os.getenv("API_CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=["GET", "POST", "DELETE"],
-                   allow_headers=["Content-Type"])
+app = FastAPI(title="Adaptive CSV Analytics API", version="0.2.0", lifespan=lifespan)
+app.middleware("http")(guard)           # added before CORS, so CORS wraps it and refusals still reach the website
+app.add_middleware(CORSMiddleware, allow_origins=allowed_origins(), allow_credentials=True,
+                   allow_methods=["GET", "POST", "DELETE"], allow_headers=["Content-Type"])
+app.include_router(auth_router)
 
 class AnswerIn(BaseModel):
     answer: str = Field(min_length=1, max_length=2000)
@@ -74,6 +76,12 @@ def answer_question(job_id: str, body: AnswerIn) -> dict:
         job.answer(body.answer)
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from None
+    return job.view()
+
+@app.post("/analyses/{job_id}/cancel")
+def cancel_analysis(job_id: str) -> dict:
+    job = _job(job_id)
+    job.cancel("stopped by you")
     return job.view()
 
 @app.get("/analyses/{job_id}/dashboard")
