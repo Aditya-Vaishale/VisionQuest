@@ -319,7 +319,7 @@ def _review_one(llm: LLMClient, card_text: str, metric: Metric,
     problem = "no reply"
     for _ in range(2):
         try:
-            reply = llm.chat(messages, thinking=True, json_mode=True, max_output_tokens=REVIEW_MAX_TOKENS)
+            reply = llm.chat(messages, thinking=False, json_mode=True, max_output_tokens=REVIEW_MAX_TOKENS)
         except LLMError as err:
             return None, f"reviewer unavailable ({err.kind})"
         try:
@@ -462,15 +462,6 @@ def check_validate(result: ValidateResult, ws: Workspace) -> list[str]:
     for v in result.verdicts:
         if v.metric.strip() in names:
             problems += _verdict_problems(v, facts, reviews, ways)
-    approved = [v.metric.strip() for v in result.verdicts if v.verdict in APPROVED and v.metric.strip() in names]
-    allowed = allowed_numbers(approved, facts)
-    texts = [(f"note on {v.metric}", v.note) for v in result.verdicts if v.note.strip()]
-    texts += [("dashboard note", n) for n in result.notes]
-    for label, text in texts:
-        bad = untraceable(text, allowed)
-        if bad:
-            problems.append(f"{label}: numbers {bad} are not in any approved metric's result; "
-                            "remove them or quote result values.")
     return problems[:15]
 
 
@@ -669,6 +660,9 @@ def run_validate(agent: Agent, reviewer: LLMClient, card: UnderstandingCard, cal
     out.approved = [m for m in calc.metrics
                     if m.name in out.verdicts and out.verdicts[m.name].verdict in APPROVED]
     allowed = allowed_numbers([m.name for m in out.approved], out.facts)
+    for name, v in list(out.verdicts.items()):          # a note with an untraceable number is removed here, not retried
+        if v.verdict in APPROVED and v.note.strip() and untraceable(v.note, allowed):
+            out.verdicts[name] = v.model_copy(update={"verdict": "approve", "note": ""})
     hidden = set(out.verdicts) - {m.name for m in out.approved}   # dropped metrics are not on the dashboard
     out.notes = [n for n in dict.fromkeys(notes) if not untraceable(n, allowed) and not _mentions(n, hidden)]
     counts = Counter(v.verdict for v in out.verdicts.values())

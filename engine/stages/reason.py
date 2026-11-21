@@ -227,7 +227,10 @@ Steps:
    otherwise state your assumption in decision. Answer Clean's open questions where you can.
 7. Call finish with the card. Python checks that columns exist, that regular rows and groups cover every
    row exactly once with the counts you state, and that keys are unique among regular rows and as small
-   as possible."""
+   as possible.
+8. Send several tool calls in ONE reply whenever the next queries do not depend on each other, for
+   example all your column checks at once. Read the results together, then follow up only where
+   something looks off. One query per reply wastes a whole round trip each time."""
 
 REASON_STAGE = Stage(
     name="reason",

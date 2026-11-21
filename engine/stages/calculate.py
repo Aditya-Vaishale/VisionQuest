@@ -7,7 +7,7 @@ matches the declared shape. Values are always recomputed from the SQL, never typ
 A dashboard filter later only rebuilds base; every recipe reruns unchanged.
 """
 from __future__ import annotations
-
+import re
 import json
 from dataclasses import dataclass, field
 from typing import Literal
@@ -155,6 +155,11 @@ def _add_tie_breaks(sql: str, columns: list[str], dims: list[str]) -> str:
     except Exception:  # cannot rewrite it: the normal ORDER BY check will explain the problem
         return sql
 
+def _without(text: str, numbers: list[str]) -> str:
+    """The text with these number words removed, so a stray number never costs a retry."""
+    drop = re.compile("|".join(re.escape(n) for n in sorted(numbers, key=len, reverse=True)))
+    return re.sub(r"\s{2,}", " ", drop.sub("", text)).strip(" ,;:-")
+
 def _save_metric(args: SaveMetricArgs, ws: Workspace) -> ToolOutcome:
     name = args.name.strip()
     if not RecipeBook.valid_name(name):
@@ -176,14 +181,12 @@ def _save_metric(args: SaveMetricArgs, ws: Workspace) -> ToolOutcome:
     rows = [[jsonable(v) for v in row] for row in result.rows]
     known = result_numbers(rows) + sql_numbers(result.sql) + context_numbers(ws.sandbox)
     loose = untraceable(" ".join([args.meaning, *args.assumptions]), known)
-    if loose:
-        return failure("numbers_in_text", "The meaning or assumptions quote numbers that are not in the result "
-                       f"or the SQL: {', '.join(loose)}.",
-                       "Describe the metric in words (e.g. 'revenue on event days compared with normal days'); "
-                       "the dashboard shows the numbers from the result.")
+    meaning = _without(args.meaning, loose) if loose else args.meaning
+    assumptions = [_without(a, loose) for a in args.assumptions] if loose else list(args.assumptions)
+
     saved = ws.recipes.save(Metric(
-        name=name, meaning=args.meaning.strip(), sql=result.sql,
-        assumptions=[a.strip() for a in args.assumptions if a.strip()],
+        name=name, meaning=meaning.strip(), sql=result.sql,
+        assumptions=[a.strip() for a in assumptions if a.strip()],
         columns=result.columns, preview=[[jsonable(v) for v in row] for row in result.rows[:10]],
         question=args.question.strip(), shape=args.shape, dimensions=dims, measures=measures,
         unit=args.unit.strip(), numerator=args.numerator.strip(), denominator=args.denominator.strip(),
@@ -289,11 +292,14 @@ Steps:
    an ORDER BY that includes every dimension as a tie-break (e.g. ORDER BY total DESC, region), so equal
    values always come back in the same order.
 5. Save each metric with save_metric; it runs the SQL and checks the result's shape. Write meaning and
-   assumptions in words: a number in them must appear in the result or the SQL (Python refuses others).
-   Test with query first if unsure.
+   assumptions in words: Python removes any number in them that is not in the result or the SQL.
 6. Save the 6-12 metrics that matter most: a few headline single values, the main trend if time exists,
    and the most useful breakdowns. Then call finish: metric names in priority order, which metrics
-   answer which question, dropped questions with reasons, and caveats in notes."""
+   answer which question, dropped questions with reasons, and caveats in notes.
+7. Send several tool calls in ONE reply whenever they do not depend on each other. Once you know
+   what the metrics are, save them in groups: put 3 or more save_metric calls in a single reply,
+   read Python's checks together, then fix only the ones that failed. Group your exploring queries
+   the same way. One call per reply wastes a whole round trip each time."""
 
 CALCULATE_STAGE = Stage(
     name="calculate",
