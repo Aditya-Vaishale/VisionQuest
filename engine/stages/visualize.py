@@ -31,6 +31,7 @@ MAX_BARS = 25
 MAX_SERIES = 8
 MAX_PIE_SLICES = 6
 MIN_LINE_POINTS = 3
+_PERCENT_UNITS = {"%", "pct", "percent"}
 MIN_SCATTER_POINTS = 5
 MAX_KPI_VALUES = 4
 CARD_BUDGET = 6_000        # characters of the card given to the AI
@@ -131,6 +132,14 @@ def chart_problems(args: ChartArgs, metric: Metric, result: QueryResult) -> tupl
     for m in args.y:
         if not _is_type(types[m], _NUMERIC):
             problems.append(f"y column {m!r} is {types[m]}, not a number.")
+    unit = (args.unit or metric.unit).strip().lower()
+    if not problems and unit in _PERCENT_UNITS:
+        index = {c: i for i, c in enumerate(result.columns)}
+        for m in args.y:
+            values = [abs(r[index[m]]) for r in rows if _is_num(r[index[m]])]
+            if values and max(values) > 100:
+                problems.append(f"{m!r} reaches {max(values):g}, so it is not a percentage; set this "
+                                f"chart's unit to the one that fits {m!r} instead of {unit!r}.")
     kind = args.kind
     if kind == "kpi":
         if n != 1:
@@ -407,8 +416,8 @@ def build_dashboard(box: Sandbox, plan: DashboardPlan, charts: list[ChartArgs], 
         sections.setdefault(c.section.strip() or "Overview", []).append({
             "id": c.chart, "kind": c.kind, "title": c.title, "subtitle": c.subtitle, "metric": m.name,
             "meaning": m.meaning, "x": c.x, "y": c.y, "series": c.series, "horizontal": c.horizontal,
-            "unit": c.unit or m.unit, "decimals": c.decimals, "size": c.size, "caveat": caveat,
-            "assumptions": list(m.assumptions), "data": data})
+             "unit": c.unit or (m.unit if len(m.measures) == 1 else ""),
+            "assumptions": list(m.assumptions), "data": data}),
     return {"title": plan.title, "subtitle": plan.subtitle, "notes": list(val.notes),
             "filters": [_filter_spec(box, f) for f in plan.filters],
             "sections": [{"name": name, "components": comps} for name, comps in sections.items()]}

@@ -90,7 +90,7 @@ export function toNumber(value: unknown): number | null {
  * `fixed` pads to the spec's decimals (cards, tables); charts drop trailing zeros.
  */
 export function numberText(n: number, measure: Measure, fixed = true): string {
-  const decimals = Math.max(0, Math.min(measure.decimals, 6))
+  const decimals = Math.min(Math.max(Math.trunc(Number(measure.decimals)) || 0, 0), 6)
   const digits = { minimumFractionDigits: fixed ? decimals : 0, maximumFractionDigits: decimals }
   const unit = measure.unit.trim()
   if (CURRENCIES.has(unit)) return numberFormat({ style: "currency", currency: unit, ...digits }).format(n)
@@ -102,7 +102,7 @@ export function numberText(n: number, measure: Measure, fixed = true): string {
 
 /** Axis ticks and tooltips: at least two decimals, so a 0–1 axis never prints "0, 0, 1". */
 export function chartNumber(measure: Measure): (n: number) => string {
-  const wide = { ...measure, decimals: Math.max(measure.decimals, 2) }
+  const wide = { ...measure, decimals: Math.max(Math.trunc(Number(measure.decimals)) || 0, 2) }
   return (n) => numberText(n, wide, false)
 }
 
